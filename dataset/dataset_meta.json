@@ -1,0 +1,65 @@
+{
+  "samples": [],
+  "synthetic": [
+    {
+      "file": "C:\\Users\\jarde\\OneDrive\\Desktop\\XYZ\\handwritten-ocr\\dataset\\synthetic\\whiteboard_0000.png",
+      "type": "whiteboard",
+      "text": "Machine Learning\n- Supervised\n- Unsupervised\n- Reinforcement"
+    },
+    {
+      "file": "C:\\Users\\jarde\\OneDrive\\Desktop\\XYZ\\handwritten-ocr\\dataset\\synthetic\\handwritten_0000.png",
+      "type": "handwritten",
+      "text": "Machine Learning\n- Supervised\n- Unsupervised\n- Reinforcement"
+    },
+    {
+      "file": "C:\\Users\\jarde\\OneDrive\\Desktop\\XYZ\\handwritten-ocr\\dataset\\synthetic\\whiteboard_0001.png",
+      "type": "whiteboard",
+      "text": "TODO:\n1. Fix bug #234\n2. Write tests\n3. Deploy to staging"
+    },
+    {
+      "file": "C:\\Users\\jarde\\OneDrive\\Desktop\\XYZ\\handwritten-ocr\\dataset\\synthetic\\handwritten_0001.png",
+      "type": "handwritten",
+      "text": "TODO:\n1. Fix bug #234\n2. Write tests\n3. Deploy to staging"
+    },
+    {
+      "file": "C:\\Users\\jarde\\OneDrive\\Desktop\\XYZ\\handwritten-ocr\\dataset\\synthetic\\whiteboard_0002.png",
+      "type": "whiteboard",
+      "text": "y = mx + b\nwhere m = slope\nb = y-intercept"
+    },
+    {
+      "file": "C:\\Users\\jarde\\OneDrive\\Desktop\\XYZ\\handwritten-ocr\\dataset\\synthetic\\handwritten_0002.png",
+      "type": "handwritten",
+      "text": "y = mx + b\nwhere m = slope\nb = y-intercept"
+    },
+    {
+      "file": "C:\\Users\\jarde\\OneDrive\\Desktop\\XYZ\\handwritten-ocr\\dataset\\synthetic\\whiteboard_0003.png",
+      "type": "whiteboard",
+      "text": "API Gateway\n  \u2192 Lambda\n    \u2192 DynamoDB"
+    },
+    {
+      "file": "C:\\Users\\jarde\\OneDrive\\Desktop\\XYZ\\handwritten-ocr\\dataset\\synthetic\\handwritten_0003.png",
+      "type": "handwritten",
+      "text": "API Gateway\n  \u2192 Lambda\n    \u2192 DynamoDB"
+    },
+    {
+      "file": "C:\\Users\\jarde\\OneDrive\\Desktop\\XYZ\\handwritten-ocr\\dataset\\synthetic\\whiteboard_0004.png",
+      "type": "whiteboard",
+      "text": "Meeting Notes:\nProject Alpha\nDeadline: Q3"
+    },
+    {
+      "file": "C:\\Users\\jarde\\OneDrive\\Desktop\\XYZ\\handwritten-ocr\\dataset\\synthetic\\handwritten_0004.png",
+      "type": "handwritten",
+      "text": "Meeting Notes:\nProject Alpha\nDeadline: Q3"
+    },
+    {
+      "file": "C:\\Users\\jarde\\OneDrive\\Desktop\\XYZ\\handwritten-ocr\\dataset\\synthetic\\whiteboard_0005.png",
+      "type": "whiteboard",
+      "text": "def fibonacci(n):\n  if n <= 1:\n    return n\n  return f(n-1)+f(n-2)"
+    },
+    {
+      "file": "C:\\Users\\jarde\\OneDrive\\Desktop\\XYZ\\handwritten-ocr\\dataset\\synthetic\\handwritten_0005.png",
+      "type": "handwritten",
+      "text": "def fibonacci(n):\n  if n <= 1:\n    return n\n  return f(n-1)+f(n-2)"
+    }
+  ]
+}

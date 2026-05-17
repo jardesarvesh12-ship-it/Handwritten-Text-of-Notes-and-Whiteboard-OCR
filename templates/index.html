@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HandwriteAI — OCR for Handwriting & Whiteboards</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --ink:     #0d0d0d;
+      --paper:   #f5f0e8;
+      --cream:   #ede8dc;
+      --accent:  #e84c1e;
+      --blue:    #1a3cff;
+      --green:   #00b86b;
+      --muted:   #7a7267;
+      --border:  #c8c0b2;
+      --shadow:  rgba(13,13,13,0.12);
+      --r:       8px;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Syne', sans-serif;
+      background: var(--paper);
+      color: var(--ink);
+      min-height: 100vh;
+    }
+
+    /* ── HEADER ── */
+    header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 1.2rem 2.5rem;
+      background: var(--ink);
+      border-bottom: 3px solid var(--accent);
+    }
+    .logo {
+      display: flex; align-items: center; gap: .7rem;
+      font-size: 1.5rem; font-weight: 800; color: var(--paper);
+      letter-spacing: -.02em;
+    }
+    .logo span { color: var(--accent); }
+    .header-meta {
+      font-family: 'Space Mono', monospace;
+      font-size: .7rem; color: var(--muted);
+    }
+
+    /* ── LAYOUT ── */
+    .app-grid {
+      display: grid;
+      grid-template-columns: 420px 1fr;
+      gap: 0;
+      min-height: calc(100vh - 62px);
+    }
+
+    /* ── LEFT PANEL ── */
+    .panel-left {
+      background: var(--cream);
+      border-right: 2px solid var(--border);
+      padding: 2rem 1.8rem;
+      display: flex; flex-direction: column; gap: 1.6rem;
+    }
+
+    .section-label {
+      font-family: 'Space Mono', monospace;
+      font-size: .65rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: .12em;
+      color: var(--muted); margin-bottom: .6rem;
+    }
+
+    /* Drop zone */
+    .drop-zone {
+      border: 2.5px dashed var(--border);
+      border-radius: var(--r);
+      background: white;
+      min-height: 200px;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: .8rem; cursor: pointer;
+      transition: border-color .2s, background .2s;
+      position: relative; overflow: hidden;
+    }
+    .drop-zone:hover, .drop-zone.dragover {
+      border-color: var(--accent); background: #fff8f6;
+    }
+    .drop-zone.has-image { border-style: solid; border-color: var(--blue); }
+    .drop-icon { font-size: 2.5rem; }
+    .drop-text { font-size: .9rem; color: var(--muted); text-align: center; }
+    .drop-text strong { color: var(--ink); }
+    #fileInput { display: none; }
+    .preview-img {
+      position: absolute; inset: 0; width: 100%; height: 100%;
+      object-fit: contain; padding: 8px;
+      display: none;
+    }
+    .preview-img.visible { display: block; }
+
+    /* Selectors */
+    .select-row { display: flex; gap: .8rem; }
+    .field { flex: 1; }
+    .field label { display: block; margin-bottom: .3rem; font-size: .78rem; font-weight: 600; }
+    select, .btn {
+      width: 100%; padding: .55rem .8rem;
+      border: 2px solid var(--border);
+      border-radius: var(--r);
+      font-family: 'Syne', sans-serif; font-size: .85rem;
+      background: white; color: var(--ink);
+      transition: border-color .2s;
+    }
+    select:focus { outline: none; border-color: var(--blue); }
+
+    .btn-run {
+      width: 100%; padding: .9rem;
+      background: var(--accent); border: none; border-radius: var(--r);
+      color: white; font-family: 'Syne', sans-serif;
+      font-size: 1rem; font-weight: 700; cursor: pointer;
+      letter-spacing: .02em;
+      transition: background .15s, transform .1s;
+      display: flex; align-items: center; justify-content: center; gap: .6rem;
+    }
+    .btn-run:hover { background: #c93d15; }
+    .btn-run:active { transform: scale(.98); }
+    .btn-run:disabled { background: var(--muted); cursor: not-allowed; }
+
+    /* Preprocessing steps */
+    .steps-list {
+      background: white; border: 1.5px solid var(--border);
+      border-radius: var(--r); padding: .8rem; max-height: 160px;
+      overflow-y: auto; display: none;
+    }
+    .steps-list.visible { display: block; }
+    .step-item {
+      font-family: 'Space Mono', monospace;
+      font-size: .68rem; color: var(--muted);
+      padding: .2rem 0; border-bottom: 1px solid var(--cream);
+    }
+    .step-item:last-child { border-bottom: none; }
+    .step-item .step-num {
+      display: inline-block; width: 18px;
+      color: var(--accent); font-weight: 700;
+    }
+
+    /* ── RIGHT PANEL ── */
+    .panel-right {
+      padding: 2rem 2.5rem;
+      display: flex; flex-direction: column; gap: 1.8rem;
+    }
+
+    /* Stats bar */
+    .stats-bar {
+      display: grid; grid-template-columns: repeat(4, 1fr);
+      gap: 1rem; opacity: 0; transition: opacity .4s;
+    }
+    .stats-bar.visible { opacity: 1; }
+    .stat-card {
+      background: white; border: 1.5px solid var(--border);
+      border-radius: var(--r); padding: .9rem 1rem;
+    }
+    .stat-val {
+      font-size: 1.6rem; font-weight: 800;
+      line-height: 1.1; margin-bottom: .2rem;
+    }
+    .stat-val.green  { color: var(--green); }
+    .stat-val.blue   { color: var(--blue); }
+    .stat-val.orange { color: var(--accent); }
+    .stat-lbl {
+      font-family: 'Space Mono', monospace;
+      font-size: .62rem; text-transform: uppercase; color: var(--muted);
+    }
+
+    /* Image comparison */
+    .compare-strip {
+      display: none; gap: 1rem;
+    }
+    .compare-strip.visible { display: grid; grid-template-columns: 1fr 1fr; }
+    .compare-card {
+      border: 1.5px solid var(--border); border-radius: var(--r);
+      overflow: hidden; background: white;
+    }
+    .compare-card-hdr {
+      padding: .5rem .9rem;
+      background: var(--cream); border-bottom: 1px solid var(--border);
+      font-family: 'Space Mono', monospace; font-size: .7rem;
+      font-weight: 700; text-transform: uppercase; color: var(--muted);
+    }
+    .compare-card img {
+      width: 100%; max-height: 220px; object-fit: contain;
+      display: block; padding: 6px; background: white;
+    }
+
+    /* Text output */
+    .output-block {
+      flex: 1; display: flex; flex-direction: column;
+      min-height: 0;
+    }
+    .output-hdr {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: .7rem;
+    }
+    .output-title { font-size: 1.05rem; font-weight: 700; }
+    .copy-btn {
+      font-family: 'Space Mono', monospace;
+      font-size: .7rem; padding: .35rem .7rem;
+      border: 1.5px solid var(--border); border-radius: 6px;
+      background: white; cursor: pointer; color: var(--muted);
+      transition: border-color .15s, color .15s;
+    }
+    .copy-btn:hover { border-color: var(--blue); color: var(--blue); }
+
+    #outputText {
+      flex: 1; min-height: 260px; padding: 1.2rem;
+      border: 2px solid var(--border); border-radius: var(--r);
+      background: white; font-family: 'Space Mono', monospace;
+      font-size: .82rem; line-height: 1.7; resize: vertical;
+      color: var(--ink);
+    }
+    #outputText:focus { outline: none; border-color: var(--blue); }
+    #outputText.empty { color: var(--muted); font-style: italic; }
+
+    /* Loading overlay */
+    .loading-overlay {
+      position: fixed; inset: 0; background: rgba(13,13,13,.55);
+      display: none; align-items: center; justify-content: center;
+      z-index: 100;
+    }
+    .loading-overlay.visible { display: flex; }
+    .loading-box {
+      background: var(--paper); border: 3px solid var(--accent);
+      border-radius: 12px; padding: 2.5rem 3rem; text-align: center;
+    }
+    .spinner {
+      width: 46px; height: 46px; border: 4px solid var(--cream);
+      border-top-color: var(--accent); border-radius: 50%;
+      animation: spin .8s linear infinite; margin: 0 auto 1rem;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-msg { font-weight: 700; font-size: 1rem; }
+    .loading-sub { color: var(--muted); font-size: .8rem; margin-top: .3rem; }
+
+    /* Error toast */
+    .toast {
+      position: fixed; bottom: 2rem; right: 2rem;
+      background: #b91c1c; color: white;
+      padding: 1rem 1.5rem; border-radius: var(--r);
+      font-size: .85rem; max-width: 340px;
+      transform: translateY(10px); opacity: 0;
+      transition: all .3s; pointer-events: none; z-index: 200;
+    }
+    .toast.visible { opacity: 1; transform: none; }
+
+    /* Confidence bar */
+    .conf-bar-wrap {
+      margin-top: .4rem; height: 6px;
+      background: var(--cream); border-radius: 3px; overflow: hidden;
+    }
+    .conf-bar {
+      height: 100%; border-radius: 3px;
+      transition: width .6s ease; width: 0;
+    }
+
+    /* Responsive */
+    @media (max-width: 900px) {
+      .app-grid { grid-template-columns: 1fr; }
+      .panel-left { border-right: none; border-bottom: 2px solid var(--border); }
+      .stats-bar { grid-template-columns: repeat(2,1fr); }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">✍ Handwrite<span>AI</span></div>
+  <div class="header-meta">OCR · Handwriting · Whiteboards · Flowcharts</div>
+</header>
+
+<div class="app-grid">
+
+  <!-- ── LEFT PANEL ── -->
+  <aside class="panel-left">
+
+    <div>
+      <div class="section-label">Upload Image</div>
+      <div class="drop-zone" id="dropZone">
+        <div class="drop-icon">📄</div>
+        <div class="drop-text">
+          <strong>Drop image here</strong><br>
+          or click to browse
+        </div>
+        <img class="preview-img" id="previewImg" alt="preview" />
+      </div>
+      <input type="file" id="fileInput" accept="image/*" />
+    </div>
+
+    <div>
+      <div class="section-label">Options</div>
+      <div class="select-row">
+        <div class="field">
+          <label for="pipelineSelect">Image Type</label>
+          <select id="pipelineSelect">
+            <option value="auto">Auto Detect</option>
+            <option value="whiteboard">Whiteboard</option>
+            <option value="handwritten">Handwritten Notes</option>
+            <option value="flowchart">Flowchart / Diagram</option>
+            <option value="document">Printed Document</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="engineSelect">OCR Engine</label>
+          <select id="engineSelect">
+            <option value="auto">Best Available</option>
+            <option value="easyocr">EasyOCR</option>
+            <option value="tesseract">Tesseract</option>
+            <option value="trocr">TrOCR (HW)</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <button class="btn-run" id="runBtn" disabled>
+      <span id="runBtnIcon">⚡</span>
+      <span id="runBtnText">Extract Text</span>
+    </button>
+
+    <div>
+      <div class="section-label">Preprocessing Steps</div>
+      <div class="steps-list" id="stepsList"></div>
+      <div id="stepsPlaceholder" style="font-size:.78rem;color:var(--muted)">
+        Steps will appear here after processing.
+      </div>
+    </div>
+
+  </aside>
+
+  <!-- ── RIGHT PANEL ── -->
+  <main class="panel-right">
+
+    <!-- Stats -->
+    <div class="stats-bar" id="statsBar">
+      <div class="stat-card">
+        <div class="stat-val green" id="statConf">—</div>
+        <div class="stat-lbl">Confidence</div>
+        <div class="conf-bar-wrap"><div class="conf-bar" id="confBar"></div></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val blue" id="statWords">—</div>
+        <div class="stat-lbl">Words Found</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val orange" id="statEngine">—</div>
+        <div class="stat-lbl">Engine Used</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val" id="statTime">—</div>
+        <div class="stat-lbl">Processing (ms)</div>
+      </div>
+    </div>
+
+    <!-- Image comparison -->
+    <div class="compare-strip" id="compareStrip">
+      <div class="compare-card">
+        <div class="compare-card-hdr">Original</div>
+        <img id="origImg" src="" alt="original" />
+      </div>
+      <div class="compare-card">
+        <div class="compare-card-hdr">Preprocessed</div>
+        <img id="procImg" src="" alt="processed" />
+      </div>
+    </div>
+
+    <!-- Text output -->
+    <div class="output-block">
+      <div class="output-hdr">
+        <div class="output-title">Extracted Text</div>
+        <button class="copy-btn" id="copyBtn" onclick="copyText()">Copy ⎘</button>
+      </div>
+      <textarea id="outputText" class="empty"
+        placeholder="Extracted text will appear here…"
+        spellcheck="false"></textarea>
+    </div>
+
+  </main>
+</div>
+
+<!-- Loading overlay -->
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="loading-box">
+    <div class="spinner"></div>
+    <div class="loading-msg" id="loadingMsg">Processing image…</div>
+    <div class="loading-sub">Preprocessing + OCR in progress</div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+const dropZone   = document.getElementById('dropZone');
+const fileInput  = document.getElementById('fileInput');
+const previewImg = document.getElementById('previewImg');
+const runBtn     = document.getElementById('runBtn');
+const outputText = document.getElementById('outputText');
+const statsBar   = document.getElementById('statsBar');
+const compareStrip = document.getElementById('compareStrip');
+const stepsList  = document.getElementById('stepsList');
+const stepsPlaceholder = document.getElementById('stepsPlaceholder');
+
+let selectedFile = null;
+
+// ── Drag & drop ──
+dropZone.addEventListener('click', () => fileInput.click());
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('dragover');
+  const f = e.dataTransfer.files[0];
+  if (f) loadFile(f);
+});
+fileInput.addEventListener('change', e => {
+  if (e.target.files[0]) loadFile(e.target.files[0]);
+});
+
+function loadFile(file) {
+  selectedFile = file;
+  const url = URL.createObjectURL(file);
+  previewImg.src = url;
+  previewImg.classList.add('visible');
+  dropZone.classList.add('has-image');
+  dropZone.querySelector('.drop-icon').style.display = 'none';
+  dropZone.querySelector('.drop-text').style.display = 'none';
+  runBtn.disabled = false;
+}
+
+// ── Run OCR ──
+runBtn.addEventListener('click', runOCR);
+
+async function runOCR() {
+  if (!selectedFile) return;
+
+  showLoading('Uploading image…');
+  runBtn.disabled = true;
+
+  const formData = new FormData();
+  formData.append('file', selectedFile);
+  formData.append('pipeline', document.getElementById('pipelineSelect').value);
+  formData.append('engine', document.getElementById('engineSelect').value);
+  formData.append('return_preview', 'true');
+
+  try {
+    updateLoading('Running OCR engine…');
+    const res = await fetch('/api/ocr', { method: 'POST', body: formData });
+    const data = await res.json();
+
+    if (!data.success) throw new Error(data.error || 'OCR failed');
+
+    // ── Update UI ──
+    // Text
+    outputText.value = data.text || '(No text detected)';
+    outputText.classList.toggle('empty', !data.text);
+
+    // Stats
+    statsBar.classList.add('visible');
+    const conf = data.confidence;
+    document.getElementById('statConf').textContent = conf + '%';
+    document.getElementById('confBar').style.width = conf + '%';
+    document.getElementById('confBar').style.background =
+      conf >= 70 ? 'var(--green)' : conf >= 40 ? 'var(--accent)' : '#b91c1c';
+    document.getElementById('statWords').textContent = data.word_count ?? '—';
+    document.getElementById('statEngine').textContent = (data.engine_used || '—').toUpperCase();
+    document.getElementById('statTime').textContent = data.processing_time_ms ?? '—';
+
+    // Previews
+    if (data.original_preview && data.processed_preview) {
+      document.getElementById('origImg').src = data.original_preview;
+      document.getElementById('procImg').src = data.processed_preview;
+      compareStrip.classList.add('visible');
+    }
+
+    // Steps
+    if (data.preprocessing_steps?.length) {
+      stepsList.innerHTML = data.preprocessing_steps.map(s =>
+        `<div class="step-item"><span class="step-num">${s.step}.</span> ${s.message}</div>`
+      ).join('');
+      stepsList.classList.add('visible');
+      stepsPlaceholder.style.display = 'none';
+    }
+
+  } catch (err) {
+    showToast('Error: ' + err.message);
+  } finally {
+    hideLoading();
+    runBtn.disabled = false;
+  }
+}
+
+function copyText() {
+  const t = outputText.value;
+  if (!t || t === '(No text detected)') return;
+  navigator.clipboard.writeText(t).then(() => showToast('Copied to clipboard!', true));
+}
+
+// ── Loading ──
+function showLoading(msg) {
+  document.getElementById('loadingMsg').textContent = msg;
+  document.getElementById('loadingOverlay').classList.add('visible');
+}
+function updateLoading(msg) {
+  document.getElementById('loadingMsg').textContent = msg;
+}
+function hideLoading() {
+  document.getElementById('loadingOverlay').classList.remove('visible');
+}
+
+// ── Toast ──
+let toastTimeout;
+function showToast(msg, success = false) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.background = success ? 'var(--green)' : '#b91c1c';
+  t.classList.add('visible');
+  clearTimeout(toastTimeout);
+  toastTimeout = setTimeout(() => t.classList.remove('visible'), 3000);
+}
+</script>
+</body>
+</html>
