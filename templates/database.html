@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Database Dashboard — HandwriteAI</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --ink:     #0d0d0d;
+      --paper:   #f5f0e8;
+      --cream:   #ede8dc;
+      --accent:  #e84c1e;
+      --blue:    #1a3cff;
+      --green:   #00b86b;
+      --muted:   #7a7267;
+      --border:  #c8c0b2;
+      --shadow:  rgba(13,13,13,0.12);
+      --r:       8px;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Syne', sans-serif;
+      background: var(--paper);
+      color: var(--ink);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── HEADER ── */
+    header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 1.2rem 2.5rem;
+      background: var(--ink);
+      border-bottom: 3px solid var(--accent);
+    }
+    .logo {
+      display: flex; align-items: center; gap: .7rem;
+      font-size: 1.5rem; font-weight: 800; color: var(--paper);
+      letter-spacing: -.02em;
+    }
+    .logo span { color: var(--accent); }
+    .back-btn {
+      font-family: 'Space Mono', monospace;
+      font-size: .8rem;
+      font-weight: 700;
+      color: var(--paper);
+      background: var(--accent);
+      border: none;
+      padding: 0.5rem 1rem;
+      border-radius: var(--r);
+      cursor: pointer;
+      text-decoration: none;
+      transition: background 0.15s, transform 0.1s;
+    }
+    .back-btn:hover { background: #c93d15; }
+    .back-btn:active { transform: scale(.97); }
+
+    /* ── CONTAINER ── */
+    .dashboard-container {
+      max-width: 1200px;
+      width: 100%;
+      margin: 2rem auto;
+      padding: 0 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.8rem;
+      flex: 1;
+    }
+
+    .page-title-section {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .page-title {
+      font-size: 1.8rem;
+      font-weight: 800;
+    }
+    .page-subtitle {
+      font-family: 'Space Mono', monospace;
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-top: 0.2rem;
+    }
+
+    /* Stats bar */
+    .stats-bar {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.2rem;
+    }
+    .stat-card {
+      background: white;
+      border: 2px solid var(--border);
+      border-radius: var(--r);
+      padding: 1.2rem 1.5rem;
+      box-shadow: 0 4px 8px var(--shadow);
+    }
+    .stat-val {
+      font-size: 2.2rem;
+      font-weight: 800;
+      line-height: 1.1;
+      margin-bottom: .2rem;
+    }
+    .stat-val.green  { color: var(--green); }
+    .stat-val.blue   { color: var(--blue); }
+    .stat-val.orange { color: var(--accent); }
+    .stat-lbl {
+      font-family: 'Space Mono', monospace;
+      font-size: .68rem;
+      text-transform: uppercase;
+      color: var(--muted);
+      font-weight: 700;
+    }
+
+    /* Main Content Card */
+    .content-card {
+      background: white;
+      border: 2px solid var(--border);
+      border-radius: var(--r);
+      padding: 1.5rem;
+      box-shadow: 0 6px 16px var(--shadow);
+      display: flex;
+      flex-direction: column;
+      gap: 1.2rem;
+    }
+
+    /* Toolbar */
+    .toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+    .search-wrapper {
+      position: relative;
+      flex: 1;
+      max-width: 400px;
+      min-width: 250px;
+    }
+    .search-input {
+      width: 100%;
+      padding: 0.6rem 1rem 0.6rem 2.2rem;
+      border: 2px solid var(--border);
+      border-radius: var(--r);
+      font-family: 'Syne', sans-serif;
+      font-size: 0.85rem;
+      background: #fafafa;
+    }
+    .search-input:focus {
+      outline: none;
+      border-color: var(--blue);
+      background: white;
+    }
+    .search-icon {
+      position: absolute;
+      left: 0.8rem;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 0.9rem;
+      color: var(--muted);
+      pointer-events: none;
+    }
+
+    .toolbar-actions {
+      display: flex;
+      gap: 0.6rem;
+      align-items: center;
+    }
+    .btn {
+      font-family: 'Space Mono', monospace;
+      font-size: .75rem;
+      font-weight: 700;
+      padding: 0.55rem 1rem;
+      border: 2px solid var(--border);
+      border-radius: var(--r);
+      background: white;
+      color: var(--muted);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      transition: all 0.15s;
+    }
+    .btn:hover {
+      border-color: var(--ink);
+      color: var(--ink);
+      background: var(--cream);
+    }
+    .btn-blue {
+      border-color: var(--blue);
+      color: var(--blue);
+    }
+    .btn-blue:hover {
+      background: var(--blue);
+      color: white;
+      border-color: var(--blue);
+    }
+
+    /* Table styling */
+    .table-wrapper {
+      overflow-x: auto;
+      border: 1.5px solid var(--border);
+      border-radius: var(--r);
+    }
+    .db-table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 0.82rem;
+    }
+    .db-table th {
+      background: var(--cream);
+      font-family: 'Space Mono', monospace;
+      font-size: 0.68rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      color: var(--muted);
+      padding: 0.9rem 1.2rem;
+      border-bottom: 2px solid var(--border);
+      white-space: nowrap;
+    }
+    .db-table td {
+      padding: 0.9rem 1.2rem;
+      border-bottom: 1px solid var(--cream);
+      vertical-align: middle;
+    }
+    .db-table tr:last-child td {
+      border-bottom: none;
+    }
+    .db-table tr:hover {
+      background: #faf8f5;
+    }
+
+    /* Badges */
+    .badge {
+      display: inline-block;
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      font-family: 'Space Mono', monospace;
+      font-size: 0.65rem;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+    .badge-engine-tesseract {
+      background: #e6fffa;
+      color: #0d9488;
+      border: 1px solid #99f6e4;
+    }
+    .badge-engine-easyocr {
+      background: #eff6ff;
+      color: #2563eb;
+      border: 1px solid #bfdbfe;
+    }
+    .badge-engine-trocr {
+      background: #faf5ff;
+      color: #7c3aed;
+      border: 1px solid #e9d5ff;
+    }
+    .badge-engine-unknown {
+      background: #f3f4f6;
+      color: #4b5563;
+      border: 1px solid #e5e7eb;
+    }
+    .badge-pipeline {
+      background: #fff7ed;
+      color: #ea580c;
+      border: 1px solid #ffedd5;
+    }
+
+    /* Confidence Indicator */
+    .history-conf {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+    .history-conf-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+
+    .action-group {
+      display: flex;
+      gap: 0.4rem;
+    }
+    .action-btn {
+      font-family: 'Space Mono', monospace;
+      font-size: 0.68rem;
+      padding: 0.25rem 0.5rem;
+      border: 1.5px solid var(--border);
+      border-radius: 4px;
+      background: white;
+      cursor: pointer;
+      font-weight: 700;
+      transition: all 0.15s;
+    }
+    .action-btn.view {
+      color: var(--blue);
+      border-color: var(--blue);
+    }
+    .action-btn.view:hover {
+      background: var(--blue);
+      color: white;
+    }
+    .action-btn.delete {
+      color: #b91c1c;
+      border-color: #fca5a5;
+    }
+    .action-btn.delete:hover {
+      background: #b91c1c;
+      color: white;
+      border-color: #b91c1c;
+    }
+
+    /* ── DETAILED VIEW MODAL ── */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(13,13,13,0.55);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 500;
+      padding: 1.5rem;
+    }
+    .modal-overlay.visible {
+      display: flex;
+    }
+    .modal-card {
+      background: var(--paper);
+      border: 3px solid var(--ink);
+      border-radius: 12px;
+      width: 100%;
+      max-width: 650px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+      display: flex;
+      flex-direction: column;
+      max-height: 80vh;
+      animation: modalOpen 0.25s ease-out;
+    }
+    @keyframes modalOpen {
+      from { transform: scale(0.95); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+    .modal-header {
+      padding: 1.2rem 1.5rem;
+      background: var(--ink);
+      color: white;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .modal-title {
+      font-size: 1.15rem;
+      font-weight: 700;
+    }
+    .modal-close {
+      background: transparent;
+      border: none;
+      color: var(--muted);
+      font-size: 1.4rem;
+      cursor: pointer;
+      transition: color 0.15s;
+    }
+    .modal-close:hover {
+      color: white;
+    }
+
+    .modal-body {
+      padding: 1.5rem;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 1.2rem;
+    }
+    .modal-meta-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 0.8rem;
+      background: var(--cream);
+      padding: 1rem;
+      border-radius: var(--r);
+      border: 1.5px solid var(--border);
+    }
+    .meta-item {
+      font-size: 0.8rem;
+    }
+    .meta-lbl {
+      font-family: 'Space Mono', monospace;
+      color: var(--muted);
+      font-size: 0.65rem;
+      text-transform: uppercase;
+      font-weight: 700;
+    }
+    .meta-val {
+      font-weight: 700;
+      margin-top: 0.1rem;
+    }
+    
+    .modal-text-section {
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+    .modal-text-hdr {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .modal-copy-btn {
+      font-family: 'Space Mono', monospace;
+      font-size: 0.68rem;
+      padding: 0.25rem 0.5rem;
+      border: 1.5px solid var(--border);
+      border-radius: 4px;
+      background: white;
+      cursor: pointer;
+      color: var(--muted);
+      transition: all 0.15s;
+    }
+    .modal-copy-btn:hover {
+      border-color: var(--blue);
+      color: var(--blue);
+    }
+
+    .modal-textarea {
+      width: 100%;
+      min-height: 250px;
+      padding: 1rem;
+      border: 2px solid var(--border);
+      border-radius: var(--r);
+      background: white;
+      font-family: 'Space Mono', monospace;
+      font-size: 0.8rem;
+      line-height: 1.6;
+      resize: vertical;
+      color: var(--ink);
+    }
+    .modal-textarea:focus {
+      outline: none;
+      border-color: var(--blue);
+    }
+
+    /* Toast */
+    .toast {
+      position: fixed;
+      bottom: 2rem;
+      right: 2rem;
+      background: var(--green);
+      color: white;
+      padding: 1rem 1.5rem;
+      border-radius: var(--r);
+      font-size: .85rem;
+      max-width: 340px;
+      transform: translateY(10px);
+      opacity: 0;
+      transition: all .3s;
+      pointer-events: none;
+      z-index: 600;
+    }
+    .toast.visible {
+      opacity: 1;
+      transform: none;
+    }
+
+    /* Footer */
+    footer {
+      text-align: center;
+      padding: 2rem;
+      font-family: 'Space Mono', monospace;
+      font-size: 0.72rem;
+      color: var(--muted);
+      border-top: 1.5px solid var(--border);
+      background: var(--cream);
+      margin-top: auto;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .stats-bar { grid-template-columns: 1fr; }
+      .toolbar { flex-direction: column; align-items: stretch; }
+      .search-wrapper { max-width: 100%; }
+      .toolbar-actions { justify-content: flex-end; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">✍ Handwrite<span>AI</span></div>
+  <a class="back-btn" href="/">← Scanner</a>
+</header>
+
+<div class="dashboard-container">
+  
+  <div class="page-title-section">
+    <div>
+      <h1 class="page-title">📁 OCR Results Database</h1>
+      <p class="page-subtitle">Inspect, filter, search, and manage all saved SQLite OCR history</p>
+    </div>
+  </div>
+
+  <!-- Stats Grid -->
+  <div class="stats-bar">
+    <div class="stat-card">
+      <div class="stat-val blue" id="totalRecords">—</div>
+      <div class="stat-lbl">Total Records</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-val green" id="avgConfidence">—</div>
+      <div class="stat-lbl">Avg Confidence</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-val orange" id="topEngine">—</div>
+      <div class="stat-lbl">Primary Engine</div>
+    </div>
+  </div>
+
+  <!-- Main Database Card -->
+  <div class="content-card">
+    
+    <!-- Toolbar -->
+    <div class="toolbar">
+      <div class="search-wrapper">
+        <span class="search-icon">🔍</span>
+        <input class="search-input" type="text" id="searchInput" placeholder="Search filename or extracted text..." oninput="filterTable()" />
+      </div>
+      <div class="toolbar-actions">
+        <button class="btn" onclick="exportData('csv')">📊 Export CSV</button>
+        <button class="btn" onclick="exportData('json')">📋 Export JSON</button>
+        <button class="btn btn-blue" onclick="loadDatabaseData()">🔄 Refresh</button>
+      </div>
+    </div>
+
+    <!-- Table -->
+    <div class="table-wrapper">
+      <table class="db-table">
+        <thead>
+          <tr>
+            <th style="width: 70px;">ID</th>
+            <th>Filename</th>
+            <th style="width: 120px;">Confidence</th>
+            <th style="width: 120px;">Engine</th>
+            <th style="width: 120px;">Pipeline</th>
+            <th style="width: 180px;">Processed At</th>
+            <th style="width: 140px; text-align: center;">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="dbTableBody">
+          <tr>
+            <td colspan="7" style="text-align: center; color: var(--muted); padding: 3rem; font-style: italic;">Loading database rows...</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+</div>
+
+<!-- Detailed Modal -->
+<div class="modal-overlay" id="detailModal">
+  <div class="modal-card">
+    <div class="modal-header">
+      <div class="modal-title" id="modalTitle">View Record Details</div>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      
+      <!-- Meta Information Grid -->
+      <div class="modal-meta-grid">
+        <div class="meta-item">
+          <div class="meta-lbl">Filename</div>
+          <div class="meta-val" id="metaFilename">—</div>
+        </div>
+        <div class="meta-item">
+          <div class="meta-lbl">Confidence Score</div>
+          <div class="meta-val" id="metaConfidence">—</div>
+        </div>
+        <div class="meta-item">
+          <div class="meta-lbl">OCR Engine</div>
+          <div class="meta-val" id="metaEngine">—</div>
+        </div>
+        <div class="meta-item">
+          <div class="meta-lbl">Image Type / Pipeline</div>
+          <div class="meta-val" id="metaPipeline">—</div>
+        </div>
+        <div class="meta-item" style="grid-column: span 2;">
+          <div class="meta-lbl">Processed Timestamp</div>
+          <div class="meta-val" id="metaTimestamp">—</div>
+        </div>
+      </div>
+
+      <!-- Text Section -->
+      <div class="modal-text-section">
+        <div class="modal-text-hdr">
+          <div class="meta-lbl">Extracted OCR Text</div>
+          <button class="modal-copy-btn" id="modalCopyBtn" onclick="copyModalText()">Copy Text ⎘</button>
+        </div>
+        <textarea class="modal-textarea" id="modalTextarea" spellcheck="false"></textarea>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Toast Overlay -->
+<div class="toast" id="toast"></div>
+
+<footer>
+  HandwriteAI Dashboard · Powered by SQLite, Flask, and Advanced OCR Preprocessing
+</footer>
+
+<script>
+let databaseRows = [];
+
+// Load data on page mount
+document.addEventListener("DOMContentLoaded", () => {
+  loadDatabaseData();
+});
+
+async function loadDatabaseData() {
+  try {
+    const res = await fetch('/api/history');
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error || 'Failed to load records');
+    
+    databaseRows = data.history || [];
+    renderStats();
+    renderTable(databaseRows);
+    showToast("Successfully loaded records from database!", true);
+  } catch (err) {
+    console.error("Error loading database:", err);
+    showToast("Error loading database records: " + err.message);
+    document.getElementById('dbTableBody').innerHTML = `
+      <tr>
+        <td colspan="7" style="text-align: center; color: #b91c1c; padding: 3rem; font-weight: 700;">
+          Failed to fetch database rows. Make sure the backend is active.
+        </td>
+      </tr>
+    `;
+  }
+}
+
+function renderStats() {
+  const count = databaseRows.length;
+  document.getElementById("totalRecords").textContent = count;
+  
+  if (count === 0) {
+    document.getElementById("avgConfidence").textContent = "0%";
+    document.getElementById("topEngine").textContent = "N/A";
+    return;
+  }
+  
+  // Calculate average confidence
+  const totalConf = databaseRows.reduce((sum, row) => sum + (row.confidence || 0), 0);
+  const avgConf = (totalConf / count).toFixed(1);
+  document.getElementById("avgConfidence").textContent = avgConf + "%";
+  
+  // Find top used engine
+  const engines = {};
+  databaseRows.forEach(row => {
+    const eng = (row.engine_used || 'unknown').toUpperCase();
+    engines[eng] = (engines[eng] || 0) + 1;
+  });
+  let topEng = "N/A";
+  let maxCount = 0;
+  for (const eng in engines) {
+    if (engines[eng] > maxCount) {
+      maxCount = engines[eng];
+      topEng = eng;
+    }
+  }
+  document.getElementById("topEngine").textContent = topEng;
+}
+
+function renderTable(rows) {
+  const tbody = document.getElementById("dbTableBody");
+  
+  if (rows.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="7" style="text-align: center; color: var(--muted); padding: 3rem; font-style: italic;">
+          No matching database records found.
+        </td>
+      </tr>
+    `;
+    return;
+  }
+  
+  tbody.innerHTML = rows.map(row => {
+    const date = new Date(row.created_at);
+    const formattedDate = date.toLocaleString();
+    
+    const engineClass = `badge-engine-${(row.engine_used || 'unknown').toLowerCase()}`;
+    const confColor = row.confidence >= 70 ? 'var(--green)' : row.confidence >= 40 ? 'var(--accent)' : '#b91c1c';
+    
+    return `
+      <tr id="row-${row.id}">
+        <td style="font-family: 'Space Mono', monospace; font-weight: 700; color: var(--muted);">#${row.id}</td>
+        <td style="font-weight: 600; max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${row.filename}">
+          ${row.filename}
+        </td>
+        <td>
+          <div class="history-conf">
+            <span class="history-conf-dot" style="background: ${confColor}"></span>
+            <span style="font-weight: 700; color: ${confColor}">${row.confidence}%</span>
+          </div>
+        </td>
+        <td><span class="badge ${engineClass}">${row.engine_used || 'unknown'}</span></td>
+        <td><span class="badge badge-pipeline">${row.pipeline || 'auto'}</span></td>
+        <td style="color: var(--muted); font-size: 0.8rem;">${formattedDate}</td>
+        <td>
+          <div class="action-group">
+            <button class="action-btn view" onclick="viewRowDetails(${row.id})">Details</button>
+            <button class="action-btn delete" onclick="deleteRow(${row.id})">Delete</button>
+          </div>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function filterTable() {
+  const query = document.getElementById("searchInput").value.toLowerCase().trim();
+  if (!query) {
+    renderTable(databaseRows);
+    return;
+  }
+  
+  const filtered = databaseRows.filter(row => {
+    return (
+      String(row.id).includes(query) ||
+      (row.filename || '').toLowerCase().includes(query) ||
+      (row.extracted_text || '').toLowerCase().includes(query) ||
+      (row.engine_used || '').toLowerCase().includes(query) ||
+      (row.pipeline || '').toLowerCase().includes(query)
+    );
+  });
+  
+  renderTable(filtered);
+}
+
+function viewRowDetails(id) {
+  const row = databaseRows.find(r => r.id === id);
+  if (!row) return;
+  
+  const date = new Date(row.created_at);
+  
+  document.getElementById("modalTitle").textContent = `Viewing Record #${row.id}`;
+  document.getElementById("metaFilename").textContent = row.filename;
+  document.getElementById("metaConfidence").textContent = row.confidence + "%";
+  document.getElementById("metaEngine").textContent = (row.engine_used || 'unknown').toUpperCase();
+  document.getElementById("metaPipeline").textContent = row.pipeline || 'auto';
+  document.getElementById("metaTimestamp").textContent = date.toLocaleString();
+  document.getElementById("modalTextarea").value = row.extracted_text || '';
+  
+  document.getElementById("detailModal").classList.add("visible");
+}
+
+function closeModal() {
+  document.getElementById("detailModal").classList.remove("visible");
+}
+
+// Close modal on overlay click
+document.getElementById("detailModal").addEventListener("click", (e) => {
+  if (e.target.id === "detailModal") {
+    closeModal();
+  }
+});
+
+function copyModalText() {
+  const t = document.getElementById("modalTextarea").value;
+  if (!t) return;
+  navigator.clipboard.writeText(t).then(() => {
+    showToast("Text copied to clipboard!", true);
+  });
+}
+
+async function deleteRow(id) {
+  if (!confirm(`Are you sure you want to permanently delete record #${id}?`)) return;
+  
+  try {
+    const res = await fetch(`/api/history/delete/${id}`, { method: 'DELETE' });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error || 'Failed to delete row');
+    
+    // Remove row from internal array
+    databaseRows = databaseRows.filter(r => r.id !== id);
+    
+    // Recalculate stats and re-filter/render table
+    renderStats();
+    filterTable();
+    
+    showToast(`Successfully deleted record #${id}!`, true);
+  } catch (err) {
+    console.error("Error deleting record:", err);
+    showToast("Delete failed: " + err.message);
+  }
+}
+
+// Export database client-side
+function exportData(type) {
+  if (databaseRows.length === 0) {
+    showToast("No database rows to export!");
+    return;
+  }
+  
+  let content = "";
+  let filename = `ocr_db_export_${Date.now()}`;
+  let mimeType = "";
+  
+  if (type === "json") {
+    content = JSON.stringify(databaseRows, null, 2);
+    filename += ".json";
+    mimeType = "application/json";
+  } else if (type === "csv") {
+    // Generate CSV
+    const headers = ["ID", "Filename", "Confidence %", "Engine", "Pipeline", "Extracted Text", "Created At"];
+    const rows = databaseRows.map(r => [
+      r.id,
+      r.filename,
+      r.confidence,
+      r.engine_used || 'unknown',
+      r.pipeline || 'auto',
+      `"${(r.extracted_text || '').replace(/"/g, '""').replace(/\n/g, ' ')}"`,
+      r.created_at
+    ]);
+    content = [headers.join(","), ...rows.map(row => row.join(","))].join("\n");
+    filename += ".csv";
+    mimeType = "text/csv";
+  }
+  
+  const blob = new Blob([content], { type: mimeType });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.setAttribute("href", url);
+  link.setAttribute("download", filename);
+  link.style.visibility = "hidden";
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  
+  showToast(`Successfully exported DB as ${type.toUpperCase()}!`, true);
+}
+
+// ── Toast ──
+let toastTimeout;
+function showToast(msg, success = false) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.background = success ? 'var(--green)' : '#b91c1c';
+  t.classList.add('visible');
+  clearTimeout(toastTimeout);
+  toastTimeout = setTimeout(() => t.classList.remove('visible'), 3000);
+}
+</script>
+</body>
+</html>

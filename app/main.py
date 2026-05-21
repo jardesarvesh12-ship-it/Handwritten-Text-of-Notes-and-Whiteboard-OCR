@@ -232,6 +232,25 @@ def get_history():
         return jsonify({"success": False, "error": str(e)}), 500
 
 
+@app.route("/database")
+def database_view():
+    return render_template("database.html")
+
+
+@app.route("/api/history/delete/<int:record_id>", methods=["DELETE"])
+def delete_history_record(record_id):
+    try:
+        record = OCRResult.query.get(record_id)
+        if not record:
+            return jsonify({"success": False, "error": "Record not found"}), 404
+        db.session.delete(record)
+        db.session.commit()
+        return jsonify({"success": True, "message": f"Successfully deleted record #{record_id}"})
+    except Exception as e:
+        logger.exception("Failed to delete record")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
 @app.route("/static/uploads/<path:filename>")
 def uploaded_file(filename):
     return send_from_directory(app.config["UPLOAD_FOLDER"], filename)

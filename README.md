@@ -1,1 +1,0 @@
-# Handwritten-Text-of-Notes-and-Whiteboard-OCR
