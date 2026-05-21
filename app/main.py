@@ -67,7 +67,12 @@ ocr_manager = None
 def get_ocr_manager() -> OCRManager:
     global ocr_manager
     if ocr_manager is None:
-        ocr_manager = OCRManager(engines=["easyocr", "tesseract"])
+        # Avoid loading 1.3 GB TrOCR model unless explicitly enabled in environment
+        trocr_enabled = os.getenv("TROCR_ENABLED", "false").lower() == "true"
+        engines = ["easyocr", "tesseract", "textract"]
+        if trocr_enabled:
+            engines.append("trocr")
+        ocr_manager = OCRManager(engines=engines, trocr_enabled=trocr_enabled)
     return ocr_manager
 
 
@@ -141,13 +146,12 @@ def ocr_endpoint():
         return jsonify({"success": False, "error": "Failed to read image"}), 400
 
     # Options
-    pipeline = (request.form.get("pipeline") or
-                (request.json or {}).get("pipeline", "auto"))
-    engine = (request.form.get("engine") or
-              (request.json or {}).get("engine", "auto"))
+    json_data = request.get_json(silent=True) or {}
+    pipeline = request.form.get("pipeline") or json_data.get("pipeline", "auto")
+    engine = request.form.get("engine") or json_data.get("engine", "auto")
     return_preview = str(
         request.form.get("return_preview") or
-        (request.json or {}).get("return_preview", "true")
+        json_data.get("return_preview", "true")
     ).lower() == "true"
 
     # --- Preprocess ---
@@ -214,7 +218,7 @@ def list_engines():
     mgr = get_ocr_manager()
     return jsonify({
         "available": mgr.available_engines,
-        "all": ["tesseract", "easyocr", "trocr"],
+        "all": ["tesseract", "easyocr", "trocr", "textract"],
     })
 
 

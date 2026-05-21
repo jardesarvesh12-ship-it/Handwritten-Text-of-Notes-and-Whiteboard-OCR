@@ -13,10 +13,9 @@ from PIL import Image
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-# Patch OCR manager before importing app so heavy models aren't loaded
 import unittest.mock as mock
 
-# Mock the OCRManager to avoid loading ML models during tests
+# Mock the OCRResult structure to prevent DB issues during mock tests
 MOCK_OCR_RESULT = {
     "text": "Hello World\nThis is a test.",
     "confidence": 82,
@@ -36,14 +35,21 @@ def make_test_image() -> bytes:
 class TestHealthEndpoint(unittest.TestCase):
 
     def setUp(self):
-        with mock.patch("utils.ocr_engine.OCRManager") as MockMgr:
-            instance = MockMgr.return_value
-            instance.available_engines = ["easyocr"]
-            instance.extract.return_value = MOCK_OCR_RESULT
-            from app.main import app
-            self.app = app
+        from app.main import app
+        self.app = app
         self.client = self.app.test_client()
         self.app.config["TESTING"] = True
+        
+        # Intercept get_ocr_manager cleanly to return mock
+        self.patcher = mock.patch("app.main.get_ocr_manager")
+        self.mock_get = self.patcher.start()
+        self.mock_mgr = mock.MagicMock()
+        self.mock_mgr.available_engines = ["easyocr", "tesseract", "textract"]
+        self.mock_mgr.extract.return_value = MOCK_OCR_RESULT
+        self.mock_get.return_value = self.mock_mgr
+
+    def tearDown(self):
+        self.patcher.stop()
 
     def test_health_200(self):
         resp = self.client.get("/health")
@@ -58,14 +64,21 @@ class TestHealthEndpoint(unittest.TestCase):
 class TestOCREndpoint(unittest.TestCase):
 
     def setUp(self):
-        with mock.patch("utils.ocr_engine.OCRManager") as MockMgr:
-            instance = MockMgr.return_value
-            instance.available_engines = ["easyocr"]
-            instance.extract.return_value = MOCK_OCR_RESULT
-            from app.main import app
-            self.app = app
+        from app.main import app
+        self.app = app
         self.client = self.app.test_client()
         self.app.config["TESTING"] = True
+        
+        # Intercept get_ocr_manager cleanly to return mock
+        self.patcher = mock.patch("app.main.get_ocr_manager")
+        self.mock_get = self.patcher.start()
+        self.mock_mgr = mock.MagicMock()
+        self.mock_mgr.available_engines = ["easyocr", "tesseract", "textract"]
+        self.mock_mgr.extract.return_value = MOCK_OCR_RESULT
+        self.mock_get.return_value = self.mock_mgr
+
+    def tearDown(self):
+        self.patcher.stop()
 
     def test_no_file_returns_400(self):
         resp = self.client.post("/api/ocr")
@@ -76,13 +89,12 @@ class TestOCREndpoint(unittest.TestCase):
         data = {"file": (io.BytesIO(img_bytes), "test.png")}
         resp = self.client.post(
             "/api/ocr",
-            data=data,
-            content_type="multipart/form-data"
+            data=data
         )
-        # May fail if OCR not installed; check it at least returns JSON
-        self.assertIn(resp.status_code, [200, 500])
+        self.assertEqual(resp.status_code, 200)
         result = json.loads(resp.data)
-        self.assertIn("success", result)
+        self.assertTrue(result["success"])
+        self.assertEqual(result["text"], MOCK_OCR_RESULT["text"])
 
     def test_base64_upload(self):
         img_bytes = make_test_image()
@@ -92,7 +104,9 @@ class TestOCREndpoint(unittest.TestCase):
             json={"image_base64": b64, "pipeline": "auto", "engine": "auto"},
             content_type="application/json"
         )
-        self.assertIn(resp.status_code, [200, 500])
+        self.assertEqual(resp.status_code, 200)
+        result = json.loads(resp.data)
+        self.assertTrue(result["success"])
 
     def test_pipeline_param_accepted(self):
         img_bytes = make_test_image()
@@ -102,21 +116,28 @@ class TestOCREndpoint(unittest.TestCase):
                 "pipeline": pl,
             }
             resp = self.client.post(
-                "/api/ocr", data=data, content_type="multipart/form-data"
+                "/api/ocr", data=data
             )
-            self.assertIn(resp.status_code, [200, 500])
+            self.assertEqual(resp.status_code, 200)
 
 
 class TestEnginesEndpoint(unittest.TestCase):
 
     def setUp(self):
-        with mock.patch("utils.ocr_engine.OCRManager") as MockMgr:
-            instance = MockMgr.return_value
-            instance.available_engines = ["easyocr"]
-            from app.main import app
-            self.app = app
+        from app.main import app
+        self.app = app
         self.client = self.app.test_client()
         self.app.config["TESTING"] = True
+        
+        # Intercept get_ocr_manager cleanly to return mock
+        self.patcher = mock.patch("app.main.get_ocr_manager")
+        self.mock_get = self.patcher.start()
+        self.mock_mgr = mock.MagicMock()
+        self.mock_mgr.available_engines = ["easyocr", "tesseract", "textract"]
+        self.mock_get.return_value = self.mock_mgr
+
+    def tearDown(self):
+        self.patcher.stop()
 
     def test_engines_endpoint(self):
         resp = self.client.get("/api/engines")

@@ -78,6 +78,89 @@ class TesseractEngine:
             return {"text": "", "confidence": 0, "engine": "tesseract", "error": str(e)}
 
 
+class TextractEngine:
+    """Wrapper around AWS Textract."""
+
+    def __init__(self):
+        self.available = False
+        try:
+            import boto3
+            self.boto3 = boto3
+            # Check for credentials in env
+            self.aws_access_key = os.getenv("AWS_ACCESS_KEY_ID")
+            self.aws_secret_key = os.getenv("AWS_SECRET_ACCESS_KEY")
+            self.aws_region = os.getenv("AWS_DEFAULT_REGION", "us-east-1")
+            
+            if self.aws_access_key and self.aws_secret_key:
+                self.available = self._check()
+            else:
+                logger.warning("AWS credentials not found in environment. TextractEngine disabled.")
+        except ImportError:
+            logger.warning("boto3 not installed. TextractEngine disabled.")
+        except Exception as e:
+            logger.warning(f"TextractEngine initialization error: {e}")
+
+    def _check(self) -> bool:
+        try:
+            # Initialize boto3 client to test environment variables
+            self.boto3.client(
+                "textract",
+                aws_access_key_id=self.aws_access_key,
+                aws_secret_access_key=self.aws_secret_key,
+                region_name=self.aws_region
+            )
+            return True
+        except Exception as e:
+            logger.warning(f"AWS Textract initialization check failed: {e}")
+            return False
+
+    def extract(self, image: Image.Image, mode: str = "auto") -> dict:
+        if not self.available:
+            return {"text": "", "confidence": 0, "engine": "textract", "error": "not configured or credentials missing"}
+
+        import io
+        try:
+            # Convert PIL image to JPEG format bytes
+            img_byte_arr = io.BytesIO()
+            image.convert("RGB").save(img_byte_arr, format="JPEG", quality=95)
+            img_bytes = img_byte_arr.getvalue()
+
+            # Create the client and invoke the API
+            client = self.boto3.client(
+                "textract",
+                aws_access_key_id=self.aws_access_key,
+                aws_secret_access_key=self.aws_secret_key,
+                region_name=self.aws_region
+            )
+
+            response = client.detect_document_text(Document={"Bytes": img_bytes})
+
+            # Parse lines and confidence scores
+            lines = []
+            confs = []
+            
+            for block in response.get("Blocks", []):
+                if block.get("BlockType") == "LINE":
+                    text = block.get("Text", "").strip()
+                    conf = block.get("Confidence", 0)  # Float from 0-100
+                    if text:
+                        lines.append(text)
+                        confs.append(conf)
+
+            full_text = "\n".join(lines)
+            avg_conf = int(np.mean(confs)) if confs else 0
+            
+            return {
+                "text": full_text,
+                "confidence": avg_conf,
+                "word_count": len(full_text.split()),
+                "engine": "textract",
+            }
+        except Exception as e:
+            logger.error(f"AWS Textract error: {e}")
+            return {"text": "", "confidence": 0, "engine": "textract", "error": str(e)}
+
+
 class EasyOCREngine:
     """Wrapper around EasyOCR."""
 
@@ -268,11 +351,11 @@ class OCRManager:
     def __init__(self, engines: list = None, trocr_enabled: bool = False):
         """
         Args:
-            engines: list of engine names to load ('tesseract', 'easyocr', 'trocr')
+            engines: list of engine names to load ('tesseract', 'easyocr', 'trocr', 'textract')
             trocr_enabled: whether to load the heavy TrOCR model (slow first load)
         """
         self.engines = {}
-        requested = engines or ["easyocr", "tesseract"]
+        requested = engines or ["easyocr", "tesseract", "textract"]
 
         if "tesseract" in requested:
             self.engines["tesseract"] = TesseractEngine()
@@ -280,6 +363,8 @@ class OCRManager:
             self.engines["easyocr"] = EasyOCREngine()
         if "trocr" in requested or trocr_enabled:
             self.engines["trocr"] = TrOCREngine()
+        if "textract" in requested:
+            self.engines["textract"] = TextractEngine()
 
         available = [k for k, v in self.engines.items() if getattr(v, "available", False)]
         logger.info(f"OCR engines available: {available}")
@@ -292,7 +377,7 @@ class OCRManager:
 
         Args:
             image: PIL Image (already preprocessed)
-            engine: 'auto' | 'tesseract' | 'easyocr' | 'trocr'
+            engine: 'auto' | 'tesseract' | 'easyocr' | 'trocr' | 'textract'
             mode: hint for engine config ('whiteboard','handwritten','flowchart','auto')
 
         Returns:

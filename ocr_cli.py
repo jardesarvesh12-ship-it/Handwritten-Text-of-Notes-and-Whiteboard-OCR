@@ -35,7 +35,7 @@ Examples:
     )
     parser.add_argument(
         "--engine", "-e",
-        choices=["auto", "tesseract", "easyocr", "trocr"],
+        choices=["auto", "tesseract", "easyocr", "trocr", "textract"],
         default="auto",
         help="OCR engine (default: auto)"
     )
@@ -93,8 +93,21 @@ Examples:
         pre_result["image"].save(args.save_preprocessed)
         print(f"Preprocessed image saved: {args.save_preprocessed}", file=sys.stderr)
 
+    # Load .env file if available
+    try:
+        from dotenv import load_dotenv
+        import os
+        load_dotenv()
+    except ImportError:
+        import os
+
     # OCR
-    ocr_mgr = OCRManager(engines=["easyocr", "tesseract"])
+    trocr_enabled = os.getenv("TROCR_ENABLED", "false").lower() == "true" or args.engine == "trocr"
+    engines = ["easyocr", "tesseract", "textract"]
+    if trocr_enabled:
+        engines.append("trocr")
+        
+    ocr_mgr = OCRManager(engines=engines, trocr_enabled=trocr_enabled)
     print(f"Running OCR ({args.engine} engine)…", file=sys.stderr)
     ocr_result = ocr_mgr.extract(
         pre_result["image"],
